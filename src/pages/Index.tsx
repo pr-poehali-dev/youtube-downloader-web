@@ -2,443 +2,482 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 
-interface DownloadItem {
+interface Service {
   id: string;
+  platform: string;
+  icon: string;
   title: string;
-  thumbnail: string;
-  quality: string;
-  progress: number;
-  status: 'downloading' | 'completed' | 'failed';
-  size: string;
-  date: string;
+  description: string;
+  price: number;
+  minOrder: number;
+}
+
+interface TariffPlan {
+  id: string;
+  name: string;
+  price: number;
+  features: string[];
+  popular?: boolean;
 }
 
 const Index = () => {
-  const [url, setUrl] = useState('');
-  const [quality, setQuality] = useState('1080p');
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [username, setUsername] = useState('Пользователь');
-  const [email, setEmail] = useState('user@example.com');
-  const [notifications, setNotifications] = useState(true);
-  const [autoDownload, setAutoDownload] = useState(false);
+  const [selectedPlatform, setSelectedPlatform] = useState('instagram');
+  const [selectedService, setSelectedService] = useState('');
+  const [quantity, setQuantity] = useState('1000');
+  const [link, setLink] = useState('');
 
-  const [downloads] = useState<DownloadItem[]>([
+  const services: Service[] = [
     {
-      id: '1',
-      title: 'Топ 10 трендов веб-дизайна 2025',
-      thumbnail: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=400',
-      quality: '1080p',
-      progress: 100,
-      status: 'completed',
-      size: '125 МБ',
-      date: '2 часа назад'
+      id: 'ig-followers',
+      platform: 'instagram',
+      icon: 'Instagram',
+      title: 'Подписчики Instagram',
+      description: 'Живые активные подписчики с аватарками',
+      price: 150,
+      minOrder: 100
     },
     {
-      id: '2',
-      title: 'React Tutorial для начинающих',
-      thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=400',
-      quality: '720p',
-      progress: 100,
-      status: 'completed',
-      size: '89 МБ',
-      date: 'Вчера'
+      id: 'ig-likes',
+      platform: 'instagram',
+      icon: 'Heart',
+      title: 'Лайки Instagram',
+      description: 'Быстрая накрутка лайков на посты',
+      price: 50,
+      minOrder: 50
     },
     {
-      id: '3',
-      title: 'Лучшие практики UI/UX дизайна',
-      thumbnail: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400',
-      quality: '4K',
-      progress: 100,
-      status: 'completed',
-      size: '342 МБ',
-      date: '3 дня назад'
+      id: 'tg-members',
+      platform: 'telegram',
+      icon: 'Send',
+      title: 'Подписчики Telegram',
+      description: 'Участники в канал или группу',
+      price: 200,
+      minOrder: 100
+    },
+    {
+      id: 'tg-views',
+      platform: 'telegram',
+      icon: 'Eye',
+      title: 'Просмотры Telegram',
+      description: 'Просмотры постов в канале',
+      price: 30,
+      minOrder: 500
+    },
+    {
+      id: 'yt-views',
+      platform: 'youtube',
+      icon: 'Play',
+      title: 'Просмотры YouTube',
+      description: 'Реальные просмотры видео',
+      price: 100,
+      minOrder: 1000
+    },
+    {
+      id: 'yt-subscribers',
+      platform: 'youtube',
+      icon: 'Users',
+      title: 'Подписчики YouTube',
+      description: 'Активные подписчики на канал',
+      price: 300,
+      minOrder: 100
     }
-  ]);
+  ];
 
-  const handleDownload = async () => {
-    if (!url) {
-      toast.error('Введите URL видео');
+  const tariffs: TariffPlan[] = [
+    {
+      id: 'basic',
+      name: 'Базовый',
+      price: 0,
+      features: ['Стандартная скорость', 'Гарантия 30 дней', 'Поддержка в рабочее время']
+    },
+    {
+      id: 'pro',
+      name: 'Профессионал',
+      price: 4990,
+      popular: true,
+      features: ['Ускоренная доставка', 'Гарантия 90 дней', 'Приоритетная поддержка 24/7', 'Скидка 15% на все заказы', 'Реферальный бонус']
+    },
+    {
+      id: 'business',
+      name: 'Бизнес',
+      price: 9990,
+      features: ['Максимальная скорость', 'Гарантия 180 дней', 'Персональный менеджер', 'Скидка 25% на все заказы', 'API доступ', 'Аналитика']
+    }
+  ];
+
+  const filteredServices = services.filter(s => s.platform === selectedPlatform);
+
+  const handleOrder = () => {
+    if (!link || !selectedService) {
+      toast.error('Заполните все поля');
       return;
     }
-
-    setIsDownloading(true);
-    setProgress(0);
-
-    const progressInterval = setInterval(() => {
-      setProgress((prev) => Math.min(prev + 15, 90));
-    }, 300);
-
-    try {
-      const response = await fetch('https://functions.poehali.dev/e9042070-a7e3-4f9d-b523-02cc67c59c55', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url, quality })
-      });
-
-      clearInterval(progressInterval);
-      setProgress(100);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Backend error:', errorText);
-        throw new Error('Ошибка загрузки видео');
-      }
-
-      const data = await response.json();
-      console.log('Download response:', data);
-
-      const link = document.createElement('a');
-      link.href = data.download_url;
-      link.download = `video_${quality}.mp4`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success(`Видео скачано в качестве ${quality}!`);
-      setUrl('');
-    } catch (error) {
-      console.error('Download error:', error);
-      toast.error('Не удалось скачать видео. Проверьте URL.');
-    } finally {
-      clearInterval(progressInterval);
-      setIsDownloading(false);
-      setTimeout(() => setProgress(0), 2000);
-    }
+    toast.success('Заказ создан! Обработка началась');
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b border-border glass">
+      <header className="border-b border-border glass sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 gradient-red rounded-lg flex items-center justify-center animate-pulse-glow">
-              <Icon name="Download" className="text-white" size={24} />
+            <div className="w-10 h-10 gradient-gold rounded-lg flex items-center justify-center">
+              <Icon name="TrendingUp" className="text-black" size={24} />
             </div>
-            <h1 className="text-2xl font-bold text-glow">TubeDL</h1>
+            <h1 className="text-2xl font-bold text-glow-gold">SocialBoost</h1>
           </div>
-          <div className="flex items-center gap-4">
-            <Badge variant="secondary" className="bg-accent text-accent-foreground">
-              <Icon name="Zap" size={16} className="mr-1" />
-              Premium
-            </Badge>
-            <Avatar>
-              <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=user" />
-              <AvatarFallback>П</AvatarFallback>
-            </Avatar>
-          </div>
+          <nav className="hidden md:flex gap-6">
+            <a href="#services" className="hover:text-primary transition-colors">Услуги</a>
+            <a href="#tariffs" className="hover:text-primary transition-colors">Тарифы</a>
+            <a href="#reviews" className="hover:text-primary transition-colors">Отзывы</a>
+          </nav>
+          <Button className="gradient-gold text-black font-semibold hover:opacity-90">
+            <Icon name="User" size={18} className="mr-2" />
+            Войти
+          </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="download" className="w-full">
-          <TabsList className="grid w-full max-w-md mx-auto grid-cols-3 glass mb-8">
-            <TabsTrigger value="download" className="data-[state=active]:gradient-red">
-              <Icon name="Download" size={18} className="mr-2" />
-              Скачать
-            </TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:gradient-red">
-              <Icon name="History" size={18} className="mr-2" />
-              История
-            </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:gradient-red">
-              <Icon name="Settings" size={18} className="mr-2" />
-              Настройки
-            </TabsTrigger>
-          </TabsList>
+      <main className="container mx-auto px-4 py-12">
+        <section className="text-center mb-20">
+          <Badge className="mb-4 gradient-gold text-black border-0 px-4 py-1">
+            Premium SMM Services
+          </Badge>
+          <h2 className="text-6xl font-bold mb-6 text-glow-gold">
+            Премиальное продвижение
+            <br />
+            в социальных сетях
+          </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
+            Профессиональные услуги накрутки для Telegram, Instagram и YouTube
+            с гарантией качества и конфиденциальности
+          </p>
+          <div className="flex gap-4 justify-center">
+            <Button size="lg" className="gradient-gold text-black font-semibold text-lg px-8 border-glow">
+              <Icon name="Rocket" size={20} className="mr-2" />
+              Начать сейчас
+            </Button>
+            <Button size="lg" variant="outline" className="glass text-lg px-8">
+              <Icon name="PlayCircle" size={20} className="mr-2" />
+              Как это работает
+            </Button>
+          </div>
+        </section>
 
-          <TabsContent value="download" className="space-y-8 animate-fade-in">
-            <div className="max-w-4xl mx-auto">
-              <div className="text-center mb-8">
-                <h2 className="text-5xl font-bold mb-4 text-glow">
-                  Скачивайте видео с YouTube
-                </h2>
-                <p className="text-xl text-muted-foreground">
-                  Быстро, бесплатно и в любом качестве
-                </p>
+        <section id="services" className="mb-20">
+          <div className="text-center mb-12">
+            <h3 className="text-4xl font-bold mb-4">Наши услуги</h3>
+            <p className="text-muted-foreground text-lg">
+              Выберите платформу и нужную услугу
+            </p>
+          </div>
+
+          <Tabs value={selectedPlatform} onValueChange={setSelectedPlatform} className="w-full">
+            <TabsList className="grid w-full max-w-lg mx-auto grid-cols-3 glass mb-8">
+              <TabsTrigger value="instagram" className="data-[state=active]:gradient-gold data-[state=active]:text-black">
+                <Icon name="Instagram" size={18} className="mr-2" />
+                Instagram
+              </TabsTrigger>
+              <TabsTrigger value="telegram" className="data-[state=active]:gradient-gold data-[state=active]:text-black">
+                <Icon name="Send" size={18} className="mr-2" />
+                Telegram
+              </TabsTrigger>
+              <TabsTrigger value="youtube" className="data-[state=active]:gradient-gold data-[state=active]:text-black">
+                <Icon name="Play" size={18} className="mr-2" />
+                YouTube
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredServices.map((service) => (
+                <Card key={service.id} className="card-premium hover:border-glow transition-all cursor-pointer">
+                  <CardHeader>
+                    <div className="w-12 h-12 gradient-gold rounded-lg flex items-center justify-center mb-4">
+                      <Icon name={service.icon as any} className="text-black" size={24} />
+                    </div>
+                    <CardTitle className="text-xl">{service.title}</CardTitle>
+                    <CardDescription className="text-base">
+                      {service.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex items-baseline gap-2 mb-4">
+                      <span className="text-3xl font-bold text-primary">{service.price}₽</span>
+                      <span className="text-muted-foreground">за 1000</span>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Минимальный заказ: {service.minOrder}
+                    </p>
+                    <Button 
+                      className="w-full gradient-gold text-black font-semibold"
+                      onClick={() => setSelectedService(service.id)}
+                    >
+                      Заказать
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </Tabs>
+        </section>
+
+        <section className="mb-20">
+          <Card className="card-premium border-glow max-w-2xl mx-auto">
+            <CardHeader>
+              <CardTitle className="text-2xl flex items-center gap-2">
+                <Icon name="Zap" className="text-primary" size={28} />
+                Быстрый заказ
+              </CardTitle>
+              <CardDescription>
+                Заполните форму и получите результат в течение 24 часов
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Выберите услугу</label>
+                <Select value={selectedService} onValueChange={setSelectedService}>
+                  <SelectTrigger className="glass">
+                    <SelectValue placeholder="Выберите услугу" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {services.map((service) => (
+                      <SelectItem key={service.id} value={service.id}>
+                        {service.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
-              <Card className="glass border-primary/20 animate-scale-in">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon name="Link" size={24} className="text-primary" />
-                    Вставьте ссылку на видео
-                  </CardTitle>
-                  <CardDescription>Поддерживаются все видео и плейлисты YouTube</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="https://www.youtube.com/watch?v=..."
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      className="glass border-primary/30 focus:border-primary"
-                      disabled={isDownloading}
-                    />
-                    <Select value={quality} onValueChange={setQuality} disabled={isDownloading}>
-                      <SelectTrigger className="w-32 glass border-primary/30">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="4K">4K (2160p)</SelectItem>
-                        <SelectItem value="1080p">Full HD (1080p)</SelectItem>
-                        <SelectItem value="720p">HD (720p)</SelectItem>
-                        <SelectItem value="480p">SD (480p)</SelectItem>
-                        <SelectItem value="360p">360p</SelectItem>
-                        <SelectItem value="audio">Только аудио</SelectItem>
-                      </SelectContent>
-                    </Select>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Ссылка на профиль/пост</label>
+                <Input
+                  placeholder="https://instagram.com/username"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  className="glass"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Количество</label>
+                <Input
+                  type="number"
+                  placeholder="1000"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="glass"
+                />
+              </div>
+
+              <div className="glass p-4 rounded-lg">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Количество:</span>
+                  <span className="font-semibold">{quantity}</span>
+                </div>
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Цена за 1000:</span>
+                  <span className="font-semibold">150₽</span>
+                </div>
+                <div className="h-px bg-border my-3"></div>
+                <div className="flex justify-between">
+                  <span className="font-semibold">Итого:</span>
+                  <span className="text-2xl font-bold text-primary">
+                    {Math.round((parseInt(quantity) / 1000) * 150)}₽
+                  </span>
+                </div>
+              </div>
+
+              <Button onClick={handleOrder} className="w-full gradient-gold text-black font-semibold h-12 text-lg">
+                <Icon name="ShoppingCart" size={20} className="mr-2" />
+                Создать заказ
+              </Button>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section id="tariffs" className="mb-20">
+          <div className="text-center mb-12">
+            <h3 className="text-4xl font-bold mb-4">Тарифные планы</h3>
+            <p className="text-muted-foreground text-lg">
+              Выберите подходящий тариф и получите дополнительные преимущества
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+            {tariffs.map((tariff) => (
+              <Card 
+                key={tariff.id} 
+                className={`card-premium ${tariff.popular ? 'border-glow scale-105' : ''} relative`}
+              >
+                {tariff.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <Badge className="gradient-gold text-black border-0 px-4 py-1">
+                      Популярный
+                    </Badge>
                   </div>
-
-                  {isDownloading && (
-                    <div className="space-y-2 animate-fade-in">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Загрузка...</span>
-                        <span className="font-semibold text-primary">{progress}%</span>
-                      </div>
-                      <Progress value={progress} className="h-3" />
-                    </div>
-                  )}
-
-                  <Button
-                    onClick={handleDownload}
-                    disabled={isDownloading}
-                    className="w-full gradient-red hover:opacity-90 transition-opacity h-12 text-lg font-semibold animate-pulse-glow"
+                )}
+                <CardHeader>
+                  <CardTitle className="text-2xl">{tariff.name}</CardTitle>
+                  <div className="flex items-baseline gap-2 mt-4">
+                    <span className="text-4xl font-bold text-primary">
+                      {tariff.price === 0 ? 'Free' : `${tariff.price}₽`}
+                    </span>
+                    {tariff.price > 0 && (
+                      <span className="text-muted-foreground">/месяц</span>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3 mb-6">
+                    {tariff.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <Icon name="Check" className="text-primary mt-1" size={18} />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    className={`w-full ${tariff.popular ? 'gradient-gold text-black' : 'glass'} font-semibold`}
                   >
-                    <Icon name="Download" size={20} className="mr-2" />
-                    {isDownloading ? 'Скачивание...' : 'Скачать видео'}
-                  </Button>
-
-                  <div className="grid grid-cols-3 gap-4 pt-4">
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-primary">4K</div>
-                      <div className="text-sm text-muted-foreground">Макс. качество</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-accent">∞</div>
-                      <div className="text-sm text-muted-foreground">Без лимитов</div>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-3xl font-bold text-primary">⚡</div>
-                      <div className="text-sm text-muted-foreground">Быстро</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid md:grid-cols-3 gap-6 mt-8">
-                <Card className="glass hover:border-primary/50 transition-colors">
-                  <CardHeader>
-                    <Icon name="Gauge" size={32} className="text-accent mb-2" />
-                    <CardTitle>Высокая скорость</CardTitle>
-                    <CardDescription>
-                      Скачивайте видео на максимальной скорости вашего интернета
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-
-                <Card className="glass hover:border-primary/50 transition-colors">
-                  <CardHeader>
-                    <Icon name="Shield" size={32} className="text-primary mb-2" />
-                    <CardTitle>Безопасность</CardTitle>
-                    <CardDescription>
-                      Все загрузки защищены SSL-шифрованием для вашей безопасности
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-
-                <Card className="glass hover:border-primary/50 transition-colors">
-                  <CardHeader>
-                    <Icon name="Sparkles" size={32} className="text-accent mb-2" />
-                    <CardTitle>Любое качество</CardTitle>
-                    <CardDescription>
-                      От 144p до 4K - выбирайте качество под свои нужды
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="history" className="animate-fade-in">
-            <div className="max-w-4xl mx-auto">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-3xl font-bold">История загрузок</h2>
-                <Button variant="outline" className="glass">
-                  <Icon name="Trash2" size={18} className="mr-2" />
-                  Очистить всё
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                {downloads.map((item) => (
-                  <Card key={item.id} className="glass hover:border-primary/50 transition-all animate-scale-in">
-                    <CardContent className="p-4">
-                      <div className="flex gap-4">
-                        <img
-                          src={item.thumbnail}
-                          alt={item.title}
-                          className="w-40 h-24 object-cover rounded-lg"
-                        />
-                        <div className="flex-1 space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div>
-                              <h3 className="font-semibold text-lg">{item.title}</h3>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="secondary" className="bg-primary/20 text-primary">
-                                  {item.quality}
-                                </Badge>
-                                <Badge variant="outline">{item.size}</Badge>
-                              </div>
-                            </div>
-                            <Button size="icon" variant="ghost" className="hover:text-primary">
-                              <Icon name="Download" size={20} />
-                            </Button>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Icon name="Clock" size={16} />
-                            {item.date}
-                            <span className="ml-auto flex items-center gap-1 text-green-500">
-                              <Icon name="CheckCircle" size={16} />
-                              Завершено
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="settings" className="animate-fade-in">
-            <div className="max-w-2xl mx-auto">
-              <h2 className="text-3xl font-bold mb-6">Настройки профиля</h2>
-
-              <Card className="glass mb-6">
-                <CardHeader>
-                  <CardTitle>Личная информация</CardTitle>
-                  <CardDescription>Обновите свои данные профиля</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Имя пользователя</Label>
-                    <Input
-                      id="username"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="glass"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="glass"
-                    />
-                  </div>
-                  <Button className="gradient-red hover:opacity-90">
-                    <Icon name="Save" size={18} className="mr-2" />
-                    Сохранить изменения
+                    {tariff.price === 0 ? 'Текущий план' : 'Выбрать план'}
                   </Button>
                 </CardContent>
               </Card>
+            ))}
+          </div>
+        </section>
 
-              <Card className="glass mb-6">
-                <CardHeader>
-                  <CardTitle>Настройки загрузки</CardTitle>
-                  <CardDescription>Управляйте параметрами скачивания</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Уведомления</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Получать уведомления о завершении загрузок
-                      </p>
-                    </div>
-                    <Switch checked={notifications} onCheckedChange={setNotifications} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label>Автоматическая загрузка</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Начинать загрузку сразу после вставки ссылки
-                      </p>
-                    </div>
-                    <Switch checked={autoDownload} onCheckedChange={setAutoDownload} />
-                  </div>
-                </CardContent>
-              </Card>
+        <section className="mb-20">
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="card-premium text-center">
+              <CardHeader>
+                <div className="w-16 h-16 gradient-gold rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon name="Shield" className="text-black" size={32} />
+                </div>
+                <CardTitle>Гарантия безопасности</CardTitle>
+                <CardDescription className="text-base">
+                  Все данные защищены SSL-шифрованием. Полная конфиденциальность
+                </CardDescription>
+              </CardHeader>
+            </Card>
 
-              <Card className="glass border-primary/30">
+            <Card className="card-premium text-center">
+              <CardHeader>
+                <div className="w-16 h-16 gradient-gold rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon name="Zap" className="text-black" size={32} />
+                </div>
+                <CardTitle>Быстрое выполнение</CardTitle>
+                <CardDescription className="text-base">
+                  Начало выполнения в течение 1 часа. Полная автоматизация процесса
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="card-premium text-center">
+              <CardHeader>
+                <div className="w-16 h-16 gradient-gold rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Icon name="HeadphonesIcon" className="text-black" size={32} />
+                </div>
+                <CardTitle>Поддержка 24/7</CardTitle>
+                <CardDescription className="text-base">
+                  Всегда на связи для решения любых вопросов и проблем
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </section>
+
+        <section id="reviews" className="mb-20">
+          <div className="text-center mb-12">
+            <h3 className="text-4xl font-bold mb-4">Отзывы клиентов</h3>
+            <p className="text-muted-foreground text-lg">
+              Более 50,000 довольных пользователей
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { name: 'Алексей М.', role: 'Блогер', text: 'Заказываю уже 6 месяцев. Качество на высоте, никаких списаний. Рекомендую!' },
+              { name: 'Мария К.', role: 'SMM-менеджер', text: 'Отличный сервис для раскрутки клиентов. Быстро, безопасно, эффективно.' },
+              { name: 'Дмитрий В.', role: 'Предприниматель', text: 'Пользуюсь бизнес-тарифом. API очень удобен, поддержка отвечает мгновенно.' }
+            ].map((review, index) => (
+              <Card key={index} className="card-premium">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Icon name="Zap" className="text-primary" />
-                    Premium подписка
-                  </CardTitle>
-                  <CardDescription>Получите доступ к расширенным возможностям</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Icon name="Check" className="text-green-500" size={20} />
-                      <span>Без рекламы</span>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 gradient-gold rounded-full flex items-center justify-center">
+                      <Icon name="User" className="text-black" size={24} />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Icon name="Check" className="text-green-500" size={20} />
-                      <span>Ускоренная загрузка</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Icon name="Check" className="text-green-500" size={20} />
-                      <span>Пакетное скачивание</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Icon name="Check" className="text-green-500" size={20} />
-                      <span>Приоритетная поддержка</span>
+                    <div>
+                      <CardTitle className="text-lg">{review.name}</CardTitle>
+                      <CardDescription>{review.role}</CardDescription>
                     </div>
                   </div>
-                  <Button className="w-full gradient-blue hover:opacity-90">
-                    <Icon name="Crown" size={18} className="mr-2" />
-                    Перейти на Premium - 299₽/месяц
-                  </Button>
-                </CardContent>
+                  <div className="flex gap-1 mb-3">
+                    {[...Array(5)].map((_, i) => (
+                      <Icon key={i} name="Star" className="text-primary fill-primary" size={16} />
+                    ))}
+                  </div>
+                  <p className="text-sm text-foreground">{review.text}</p>
+                </CardHeader>
               </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
+            ))}
+          </div>
+        </section>
       </main>
 
-      <footer className="border-t border-border glass mt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 gradient-red rounded-lg flex items-center justify-center">
-                <Icon name="Download" className="text-white" size={18} />
+      <footer className="border-t border-border glass mt-20">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 gradient-gold rounded-lg flex items-center justify-center">
+                  <Icon name="TrendingUp" className="text-black" size={20} />
+                </div>
+                <span className="font-bold text-xl">SocialBoost</span>
               </div>
-              <span className="font-semibold">TubeDL © 2025</span>
+              <p className="text-sm text-muted-foreground">
+                Премиальные услуги продвижения в социальных сетях
+              </p>
             </div>
-            <div className="flex gap-6 text-sm text-muted-foreground">
-              <a href="#" className="hover:text-primary transition-colors">О сервисе</a>
-              <a href="#" className="hover:text-primary transition-colors">Политика конфиденциальности</a>
-              <a href="#" className="hover:text-primary transition-colors">Поддержка</a>
+            <div>
+              <h4 className="font-semibold mb-4">Услуги</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-primary">Instagram</a></li>
+                <li><a href="#" className="hover:text-primary">Telegram</a></li>
+                <li><a href="#" className="hover:text-primary">YouTube</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Компания</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-primary">О нас</a></li>
+                <li><a href="#" className="hover:text-primary">Блог</a></li>
+                <li><a href="#" className="hover:text-primary">Контакты</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-semibold mb-4">Поддержка</h4>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="#" className="hover:text-primary">FAQ</a></li>
+                <li><a href="#" className="hover:text-primary">Политика</a></li>
+                <li><a href="#" className="hover:text-primary">Условия</a></li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-muted-foreground">
+              © 2025 SocialBoost. Все права защищены.
+            </p>
+            <div className="flex gap-4">
+              <Icon name="Instagram" className="text-muted-foreground hover:text-primary cursor-pointer" size={20} />
+              <Icon name="Send" className="text-muted-foreground hover:text-primary cursor-pointer" size={20} />
+              <Icon name="MessageCircle" className="text-muted-foreground hover:text-primary cursor-pointer" size={20} />
             </div>
           </div>
         </div>
