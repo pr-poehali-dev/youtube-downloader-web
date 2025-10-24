@@ -75,11 +75,11 @@ const Index = () => {
     setIsDownloading(true);
     setProgress(0);
 
-    try {
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => Math.min(prev + 15, 90));
-      }, 300);
+    const progressInterval = setInterval(() => {
+      setProgress((prev) => Math.min(prev + 15, 90));
+    }, 300);
 
+    try {
       const response = await fetch('https://functions.poehali.dev/e9042070-a7e3-4f9d-b523-02cc67c59c55', {
         method: 'POST',
         headers: {
@@ -89,26 +89,32 @@ const Index = () => {
       });
 
       clearInterval(progressInterval);
+      setProgress(100);
 
       if (!response.ok) {
-        throw new Error('Ошибка загрузки');
+        const errorText = await response.text();
+        console.error('Backend error:', errorText);
+        throw new Error('Ошибка загрузки видео');
       }
 
       const data = await response.json();
-      setProgress(100);
+      console.log('Download response:', data);
 
       const link = document.createElement('a');
       link.href = data.download_url;
-      link.download = `video_${data.quality}.mp4`;
+      link.download = `video_${quality}.mp4`;
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      toast.success('Видео успешно скачано!');
+      toast.success(`Видео скачано в качестве ${quality}!`);
+      setUrl('');
     } catch (error) {
-      toast.error('Ошибка при скачивании видео');
-      console.error(error);
+      console.error('Download error:', error);
+      toast.error('Не удалось скачать видео. Проверьте URL.');
     } finally {
+      clearInterval(progressInterval);
       setIsDownloading(false);
       setTimeout(() => setProgress(0), 2000);
     }
