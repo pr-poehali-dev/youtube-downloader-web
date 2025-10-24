@@ -1,0 +1,39 @@
+{
+  "tests": [
+    {
+      "name": "Test OPTIONS request for CORS",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Test POST download request",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "quality": "1080p"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "success": true,
+        "quality": "1080p"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Test missing URL error",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "url": "",
+        "quality": "720p"
+      },
+      "expectedStatus": 400,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

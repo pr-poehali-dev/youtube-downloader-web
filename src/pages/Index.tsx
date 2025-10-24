@@ -66,7 +66,7 @@ const Index = () => {
     }
   ]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!url) {
       toast.error('Введите URL видео');
       return;
@@ -75,17 +75,43 @@ const Index = () => {
     setIsDownloading(true);
     setProgress(0);
 
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsDownloading(false);
-          toast.success('Видео успешно скачано!');
-          return 100;
-        }
-        return prev + 10;
+    try {
+      const progressInterval = setInterval(() => {
+        setProgress((prev) => Math.min(prev + 15, 90));
+      }, 300);
+
+      const response = await fetch('https://functions.poehali.dev/e9042070-a7e3-4f9d-b523-02cc67c59c55', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url, quality })
       });
-    }, 300);
+
+      clearInterval(progressInterval);
+
+      if (!response.ok) {
+        throw new Error('Ошибка загрузки');
+      }
+
+      const data = await response.json();
+      setProgress(100);
+
+      const link = document.createElement('a');
+      link.href = data.download_url;
+      link.download = `video_${data.quality}.mp4`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast.success('Видео успешно скачано!');
+    } catch (error) {
+      toast.error('Ошибка при скачивании видео');
+      console.error(error);
+    } finally {
+      setIsDownloading(false);
+      setTimeout(() => setProgress(0), 2000);
+    }
   };
 
   return (
